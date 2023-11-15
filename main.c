@@ -35,7 +35,8 @@
 
 #include "conf.h"
 
-CONF_STRING(font, 0,   "DejaVu Sans Mono", "Font name", "STR");
+//CONF_STRING(font, 0,   "DejaVu Sans Mono", "Font name", "STR");
+CONF_STRING(font, 0,   "Monaspace Neon", "Font name", "STR");
 
 CONF_STRING(title, 'T', "pangoterm", "Title", "STR");
 
@@ -46,12 +47,17 @@ CONF_STRING(term, 0, "xterm", "Terminal type", "STR");
 
 static char *alt_fonts[] = {
   "Courier 10 Pitch",
+  "Monaspace Neon",
+  "Monaspace Argon",
+  "Monaspace Xenon",
+  "Monaspace Krypton",
+  "Monaspace Radon",
   NULL
 };
 static void apply_altfont(int index, ConfigValue v)
 {
-  if(index <= 0 || index > 1)
-    return;
+  //if(index <= 0 || index > 1)
+  //  return;
 
   /* Technically a memory leak but only once at config time */
   alt_fonts[index-1] = strdup(v.s);

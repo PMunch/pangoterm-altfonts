@@ -37,7 +37,7 @@ CONF_PARAMETRIC_STRING(colour, 0, apply_colour, "Palette colour", "COL");
 
 CONF_INT(cursor_shape, 0, 1, "Cursor shape (1=block 2=underbar 3=vertical bar)", "SHAPE");
 
-CONF_DOUBLE(size, 's', 9.0, "Font size", "NUM");
+CONF_DOUBLE(size, 's', 12.0, "Font size", "NUM");
 
 CONF_INT(cursor_blink_interval, 0, 500, "Cursor blink interval", "MSEC");
 
@@ -723,8 +723,8 @@ static void flush_pending(PangoTerm *pt)
       pango_layout_set_attributes(layout, pt->pen.pangoattrs);
 
     pango_layout_set_font_description(layout, pt->fontdescs[pt->pen.attrs.font]);
-    if(pt->pen.attrs.font != 0)
-      glyphs_y += pt->fontoffsets[pt->pen.attrs.font];
+    //if(pt->pen.attrs.font != 0)
+    glyphs_y += pt->fontoffsets[pt->pen.attrs.font];
 
     if(pt->pen.attrs.small)
       // scale happens about the centre of the char; we need to keep the baseline
@@ -743,6 +743,7 @@ static void flush_pending(PangoTerm *pt)
 
     if(pt->pen.attrs.font != 0)
       cairo_scale(gc, pt->fontxscaling[pt->pen.attrs.font], 1.0);
+    pango_cairo_update_layout(gc, layout);
     pango_cairo_show_layout(gc, layout);
 
     g_string_truncate(pt->glyphs, 0);
@@ -2237,8 +2238,9 @@ void pangoterm_set_fonts(PangoTerm *pt, char *font, char **alt_fonts)
   pt->fontoffsets = malloc(sizeof(int) * n_fonts); /* gets filled in by `pangoterm_start()` */
   pt->fontxscaling = malloc(sizeof(double) * n_fonts);
 
-  for(int i = 0; i < n_fonts; i++)
+  for(int i = 0; i < n_fonts; i++) {
     pt->fontdescs[i] = pango_font_description_from_string(pt->fonts[i]);
+  }
 }
 
 void pangoterm_set_font_size(PangoTerm *pt, double size)
@@ -2285,6 +2287,8 @@ void pangoterm_start(PangoTerm *pt)
 
   for(int i = 0; i < pt->n_fonts; i++) {
     PangoFontDescription *fontdesc = pt->fontdescs[i];
+    if(pango_font_description_get_size(fontdesc) == 0)
+      pango_font_description_set_size(fontdesc, pt->font_size * PANGO_SCALE);
     PangoFontMetrics *metrics = pango_context_get_metrics(pctx,
         fontdesc, pango_context_get_language(pctx));
 
@@ -2294,16 +2298,17 @@ void pangoterm_start(PangoTerm *pt)
 
       descent0 = pango_font_metrics_get_descent(metrics);
       int height = pango_font_metrics_get_ascent(metrics) + descent0;
+      int aheight = pango_font_metrics_get_height(metrics);
 
       pt->cell_width_pango = width;
       pt->cell_width  = PANGO_PIXELS_CEIL(width);
-      pt->cell_height = PANGO_PIXELS_CEIL(height);
+      pt->cell_height = PANGO_PIXELS_CEIL(aheight);
 
-      pt->fontoffsets[i] = 0;
+      pt->fontoffsets[i] = PANGO_PIXELS_CEIL((aheight - height) / 2);
     }
     else {
       int offset = PANGO_PIXELS_CEIL(pango_font_metrics_get_descent(metrics) - descent0);
-      pt->fontoffsets[i] = offset;
+      pt->fontoffsets[i] = pt->fontoffsets[0] + offset;
 
       int width = (pango_font_metrics_get_approximate_char_width(metrics) +
                    pango_font_metrics_get_approximate_digit_width(metrics)) / 2;
